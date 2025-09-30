@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eu
+if [ -n "${BASH_VERSION:-}" ]; then
+  set -o pipefail
+fi
 
 echo "Starting Kafka and Zookeeper..."
 docker-compose up -d
@@ -38,5 +41,8 @@ wait $PID1 $PID2 $PID3
 
 end_time=$(date +%s)
 echo "Total pipeline runtime: $((end_time - start_time)) seconds"
+
+# Pause so the window doesn't close immediately when run via double-click
+read -p "Press Enter to exit" || true
 
 

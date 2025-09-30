@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eu
+# Enable pipefail only when supported (some shells on Windows lack it)
+if [ -n "${BASH_VERSION:-}" ]; then
+  set -o pipefail
+fi
 
 # Ensure we run from repo root regardless of invocation path
 cd "$(dirname "$0")/.."

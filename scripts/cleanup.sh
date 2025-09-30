@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eu
+# Enable pipefail only when running under Bash (not all shells support it)
+if [ -n "${BASH_VERSION:-}" ]; then
+  set -o pipefail
+fi
 
 docker-compose down -v
 
