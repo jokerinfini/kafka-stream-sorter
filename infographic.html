@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kafka External Sort Pipeline Infographic</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .flow-arrow { display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #0a9396; margin: 0.5rem 0; }
+        .flow-box { border: 2px solid #94d2bd; background-color: #ffffff; color: #005f73; padding: 1rem; border-radius: 0.5rem; text-align: center; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); transition: transform 0.2s; height: 100%; }
+        .flow-box:hover { transform: translateY(-5px); }
+        .flow-box h3 { font-weight: 700; color: #005f73; }
+        .stat-card { background-color: #ffffff; border-radius: 0.75rem; padding: 1.5rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); text-align: center; }
+        .stat-number { font-size: 3.75rem; line-height: 1; font-weight: 900; color: #ca6702; }
+        .stat-label { font-size: 1.125rem; line-height: 1.75rem; color: #005f73; margin-top: 0.5rem; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 300px; max-height: 400px; }
+        @media (min-width: 768px) { .chart-container { height: 350px; } }
+        .tuning-point { font-family: 'Courier New', Courier, monospace; background-color: #e9d8a6; color: #005f73; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-weight: 600; margin-top: 0.25rem; display: inline-block; }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-[#005f73] mb-2">High-Performance Kafka External Sort Pipeline</h1>
+            <p class="text-xl md:text-2xl text-[#0a9396]">Sorting 50 Million Records in Go Under a 2GB Memory Constraint</p>
+        </header>
+
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16 text-center">
+            <div class="stat-card"><p class="stat-number">50M</p><p class="stat-label">Records Processed</p></div>
+            <div class="stat-card"><p class="stat-number">&lt;2GB</p><p class="stat-label">Strict Memory Cap</p></div>
+            <div class="stat-card"><p class="stat-number">3</p><p class="stat-label">Parallel Sort Keys</p></div>
+        </section>
+
+        <section class="mb-16">
+            <h2 class="text-3xl font-bold text-center mb-8 text-[#005f73]">System Architecture: End-to-End Data Flow</h2>
+            <div class="p-6 bg-white rounded-lg shadow-lg">
+                <p class="text-center text-lg mb-8 text-[#005f73]">The pipeline uses a producer-consumer model with Kafka as the central message broker. A Go application generates data, pushes it to a source topic, and three parallel sorter instances consume, sort, and publish results to dedicated topics.</p>
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
+                    <div class="flow-box md:col-span-1"><h3>1. Producer</h3><p>Go goroutines generate CSV records and publish to Kafka via a buffered channel.</p></div>
+                    <div class="flow-arrow hidden md:block">→</div><div class="flow-arrow md:hidden">↓</div>
+                    <div class="flow-box md:col-span-1 bg-[#e9d8a6]"><h3>2. Kafka Topic</h3><p class="font-mono font-bold">source</p></div>
+                    <div class="flow-arrow hidden md:block">→</div><div class="flow-arrow md:hidden">↓</div>
+                    <div class="md:col-span-3 space-y-4">
+                        <div class="flex items-center space-x-4"><div class="flow-box flex-1"><h3>3. Sorter (ID)</h3><p>Sorts by ID</p></div><div class="flow-arrow">→</div><div class="flow-box flex-1 bg-[#e9d8a6]"><h3 class="font-mono font-bold">sorted_id</h3></div></div>
+                        <div class="flex items-center space-x-4"><div class="flow-box flex-1"><h3>3. Sorter (Name)</h3><p>Sorts by Name</p></div><div class="flow-arrow">→</div><div class="flow-box flex-1 bg-[#e9d8a6]"><h3 class="font-mono font-bold">sorted_name</h3></div></div>
+                        <div class="flex items-center space-x-4"><div class="flow-box flex-1"><h3>3. Sorter (Continent)</h3><p>Sorts by Continent</p></div><div class="flow-arrow">→</div><div class="flow-box flex-1 bg-[#e9d8a6]"><h3 class="font-mono font-bold">sorted_continent</h3></div></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-16">
+            <h2 class="text-3xl font-bold text-center mb-8 text-[#005f73]">Algorithm Explained: External Merge Sort</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="p-6 bg-white rounded-lg shadow-lg">
+                    <h3 class="text-2xl font-bold text-center mb-4 text-[#ca6702]">Phase 1: Chunk & Spill</h3>
+                    <p class="text-center mb-6 text-[#005f73]">Read manageable chunks, sort in-memory, spill to temp files.</p>
+                    <div class="flex flex-col items-center"><div class="flow-box w-full max-w-xs">Read 1M Records</div><div class="flow-arrow">↓</div><div class="flow-box w-full max-w-xs">In-Memory Sort</div><div class="flow-arrow">↓</div><div class="flow-box w-full max-w-xs bg-[#94d2bd]">Spill Sorted Chunk</div></div>
+                </div>
+                <div class="p-6 bg-white rounded-lg shadow-lg">
+                    <h3 class="text-2xl font-bold text-center mb-4 text-[#ca6702]">Phase 2: K-Way Merge</h3>
+                    <p class="text-center mb-6 text-[#005f73]">Open all chunks, min-heap k-way merge, stream to sorted topic.</p>
+                    <div class="flex flex-col items-center"><div class="flow-box w-full max-w-xs bg-[#94d2bd]">Open All Temp Files</div><div class="flow-arrow">↓</div><div class="flow-box w-full max-w-xs">Min-Heap Merge</div><div class="flow-arrow">↓</div><div class="flow-box w-full max-w-xs">Stream to Topic</div></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16 items-center">
+            <div class="p-6 bg-white rounded-lg shadow-lg"><h3 class="text-2xl font-bold text-center mb-4 text-[#005f73]">Resource Management</h3><p class="text-center text-lg mb-6 text-[#005f73]">Total memory ~2GB split between Kafka and app container.</p><div class="chart-container"><canvas id="memoryAllocationChart"></canvas></div></div>
+            <div class="p-6 bg-white rounded-lg shadow-lg"><h3 class="text-2xl font-bold text-center mb-4 text-[#005f73]">Performance Bottleneck Analysis</h3><p class="text-center text-lg mb-6 text-[#005f73]">Disk I/O dominates; Kafka/network and CPU are secondary.</p><div class="chart-container"><canvas id="bottleneckChart"></canvas></div></div>
+        </section>
+
+        <section class="mb-16">
+            <h2 class="text-3xl font-bold text-center mb-8 text-[#005f73]">Code-Level Performance Tuning</h2>
+            <div class="p-8 bg-white rounded-lg shadow-lg">
+                <p class="text-center text-lg mb-8 text-[#005f73]">Batching, buffer sizes, and efficient parsing reduce I/O and network overhead.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <h3 class="text-xl font-bold mb-4 text-[#ca6702]">Producer & Reader</h3>
+                        <ul class="space-y-4 text-gray-700">
+                            <li>Workers: <span class="tuning-point">NumCPU()*3</span></li>
+                            <li>Writer Batch: <span class="tuning-point">10,000</span>; BatchBytes: <span class="tuning-point">16MB</span></li>
+                            <li>Reader fetch sizes up to <span class="tuning-point">32MB</span></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold mb-4 text-[#ca6702]">External Sort & Parsing</h3>
+                        <ul class="space-y-4 text-gray-700">
+                            <li>Spill/Merge buffers: <span class="tuning-point">4MiB</span></li>
+                            <li>Numeric ID parsing; string slicing without allocations</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-16">
+            <h2 class="text-3xl font-bold text-center mb-8 text-[#005f73]">Scaling Strategy</h2>
+            <div class="p-6 bg-white rounded-lg shadow-lg">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="flow-box p-6"><h3 class="text-xl font-bold mb-2">Tier 1: Hardware</h3><p>Faster SSDs/NVMe for temp files.</p></div>
+                    <div class="flow-box p-6"><h3 class="text-xl font-bold mb-2">Tier 2: Parallelism</h3><p>Partition topics; multiple sorters.</p></div>
+                    <div class="flow-box p-6"><h3 class="text-xl font-bold mb-2">Tier 3: Distributed</h3><p>Spark/Flink for cluster-wide sort/merge.</p></div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        function wrapLabels(label) {
+            const maxLen = 16;
+            if (typeof label !== 'string' || label.length <= maxLen) return label;
+            const words = label.split(' ');
+            const lines = [];
+            let currentLine = '';
+            for (const word of words) {
+                if ((currentLine + ' ' + word).trim().length > maxLen) { lines.push(currentLine.trim()); currentLine = word; }
+                else { currentLine = (currentLine + ' ' + word).trim(); }
+            }
+            if (currentLine) lines.push(currentLine.trim());
+            return lines;
+        }
+        const sharedTooltipOptions = { plugins: { tooltip: { callbacks: { title: function(tooltipItems){ const item = tooltipItems[0]; let label = item.chart.data.labels[item.dataIndex]; return Array.isArray(label) ? label.join(' ') : label; } } } } };
+        const memoryCtx = document.getElementById('memoryAllocationChart').getContext('2d');
+        new Chart(memoryCtx, { type: 'doughnut', data: { labels: ['Go Application (1500MB)', 'Kafka Broker (512MB)'], datasets: [{ label: 'Memory Allocation', data: [1500, 512], backgroundColor: ['#0a9396', '#ee9b00'], borderColor: '#f8fafc', borderWidth: 4, hoverOffset: 8 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { ...sharedTooltipOptions.plugins, legend: { position: 'bottom', labels: { color: '#005f73', font: { size: 14 } } } }, cutout: '60%' } });
+        const bottleneckCtx = document.getElementById('bottleneckChart').getContext('2d');
+        const bottleneckLabels = ['Disk I/O (Spill & Merge)', 'Kafka Throughput', 'CPU & Go GC'].map(wrapLabels);
+        new Chart(bottleneckCtx, { type: 'bar', data: { labels: bottleneckLabels, datasets: [{ label: 'Relative Performance Impact', data: [90, 65, 40], backgroundColor: ['#bb3e03', '#ca6702', '#e9d8a6'], borderRadius: 4 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { ...sharedTooltipOptions.plugins, legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { color: '#005f73' }, title: { display: true, text: 'Impact Score', color: '#005f73' } }, y: { grid: { color: '#e2e8f0' }, ticks: { color: '#005f73', font: { size: 12 } } } } } });
+    </script>
+
+</body>
+</html>
+
+

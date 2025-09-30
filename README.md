@@ -1,5 +1,7 @@
 # Core Infra Project: Kafka External Sort Pipeline (Go)
 
+Open the interactive infographic: [infographic.html](./infographic.html)
+
 ## Project Overview
 A high-performance Go pipeline that generates 50 million CSV records, publishes to Kafka, consumes and sorts the data by three keys (id, name, continent) under a strict ~2GB memory cap using external merge sort, and publishes sorted results to separate Kafka topics. Everything runs with Docker and docker-compose.
 
