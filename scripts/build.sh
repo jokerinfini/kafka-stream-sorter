@@ -12,4 +12,9 @@ cd "$(dirname "$0")/.."
 # The tag "core-infra-project:latest" will be used by docker-compose.
 docker build -t core-infra-project:latest .
 
+echo ""
+echo "Build completed successfully!"
+# Pause so the window doesn't close immediately when run via double-click
+read -p "Press Enter to exit" || true
+
 

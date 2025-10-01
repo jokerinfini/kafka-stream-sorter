@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
+	"net/http"
+	_ "net/http/pprof" // Enable pprof profiling endpoints
 	"os"
 	"runtime"
 	"sync"
@@ -21,12 +24,20 @@ const (
 )
 
 func main() {
+	// Start pprof HTTP server for profiling (requirement #6)
+	// Access profiling at: http://localhost:6060/debug/pprof/
+	go func() {
+		log.Println("[pprof] Profiling server starting on :6060")
+		log.Println(http.ListenAndServe("0.0.0.0:6060", nil))
+	}()
+
+	fmt.Println("[Producer] Starting generation and production pipeline...")
 	start := time.Now()
 	brokers := getenv("KAFKA_BROKERS", "kafka:9092")
 	sourceTopic := getenv("SOURCE_TOPIC", "source")
 
 	writer := kclient.NewWriter([]string{brokers}, sourceTopic)
-	defer writer.Close()
+	// Don't use defer - we'll explicitly close after wg.Wait() to ensure flush
 
 	// Jobs channel to bound generation to exactly totalRecords
 	jobs := make(chan struct{}, queueSize)
@@ -56,9 +67,13 @@ func main() {
 	}()
 
 	// Publisher with batching
+	fmt.Println("[Producer] Starting Kafka writes...")
+	publishStart := time.Now()
+
 	ctx := context.Background()
 	sent := 0
 	batch := make([]gokafka.Message, 0, 1000)
+
 	for sent < totalRecords {
 		// Collect batch
 		batch = batch[:0]
@@ -68,16 +83,33 @@ func main() {
 			sent++
 		}
 		if err := writer.WriteMessages(ctx, batch...); err != nil {
-			fmt.Fprintf(os.Stderr, "write error: %v\n", err)
+			fmt.Fprintf(os.Stderr, "[ERROR] Kafka write error: %v\n", err)
 		}
+		// Checkpoint logging every 1M records (requirement #4)
 		if sent%1_000_000 == 0 {
-			fmt.Printf("Produced %d records\n", sent)
+			fmt.Printf("[Progress] Produced %d / %d records (%.1f%%)\n",
+				sent, totalRecords, float64(sent)/float64(totalRecords)*100)
 		}
 	}
 
 	close(records)
 	wg.Wait()
-	fmt.Printf("Generation + production completed in %s\n", time.Since(start))
+
+	// Ensure all async writes are flushed before exiting
+	fmt.Println("[Producer] Flushing remaining Kafka writes...")
+	if err := writer.Close(); err != nil {
+		fmt.Fprintf(os.Stderr, "[ERROR] Failed to flush Kafka writer: %v\n", err)
+	}
+
+	publishDuration := time.Since(publishStart)
+	totalDuration := time.Since(start)
+
+	// Performance summary (requirement #7)
+	fmt.Printf("\n[Summary] Producer completed successfully\n")
+	fmt.Printf("  - Total records: %d\n", totalRecords)
+	fmt.Printf("  - Total time: %v\n", totalDuration)
+	fmt.Printf("  - Publish time: %v\n", publishDuration)
+	fmt.Printf("  - Throughput: %.0f records/sec\n", float64(totalRecords)/totalDuration.Seconds())
 }
 
 func getenv(k, def string) string {

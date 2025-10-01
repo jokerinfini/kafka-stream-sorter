@@ -46,8 +46,13 @@ services:
       - kafka
     volumes:
       - ./scripts:/app/scripts
+    ports:
+      - "6060:6060"  # pprof for producer
+      - "6061:6061"  # pprof for sorter (id)
+      - "6062:6062"  # pprof for sorter (name)
+      - "6064:6064"  # pprof for sorter (continent)
     restart: "no"
-    mem_limit: 1500m
+    mem_limit: 1800m
     cpus: 4
 
 networks:

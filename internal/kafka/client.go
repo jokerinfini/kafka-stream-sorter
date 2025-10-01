@@ -13,7 +13,7 @@ func NewWriter(brokers []string, topic string) *gokafka.Writer {
 		Topic:        topic,
 		RequiredAcks: gokafka.RequireOne,
 		Balancer:     &gokafka.LeastBytes{},
-		Async:        true,
+		Async:        true, // Async for better throughput
 		BatchTimeout: 150 * time.Millisecond,
 		BatchSize:    10000,
 		BatchBytes:   16 * 1024 * 1024, // 16MB
@@ -30,6 +30,10 @@ func NewReader(brokers []string, topic string, groupID string) *gokafka.Reader {
 		MaxBytes:       32 * 1024 * 1024, // 32MB
 		CommitInterval: time.Second,
 		StartOffset:    gokafka.FirstOffset,
+		// Ensure all partitions are assigned to this single consumer
+		GroupBalancers: []gokafka.GroupBalancer{
+			gokafka.RangeGroupBalancer{},
+		},
 	})
 }
 

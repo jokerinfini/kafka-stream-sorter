@@ -1,0 +1,18 @@
+# Ensure consistent line endings across platforms
+* text=auto
+
+# Force LF for shell scripts (critical for cross-platform execution)
+*.sh text eol=lf
+
+# Force LF for Go source files
+*.go text eol=lf
+
+# Force LF for config files
+*.yml text eol=lf
+*.yaml text eol=lf
+*.mod text eol=lf
+*.sum text eol=lf
+
+# Keep CRLF for Windows-specific files (if any)
+*.bat text eol=crlf
+

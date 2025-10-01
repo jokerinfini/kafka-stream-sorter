@@ -29,15 +29,10 @@ start_time=$(date +%s)
 echo "Running producer..."
 docker-compose run --rm pipeline_app ./producer | cat
 
-echo "Running sorters in parallel..."
-docker-compose run --rm -T pipeline_app ./sorter id &
-PID1=$!
-docker-compose run --rm -T pipeline_app ./sorter name &
-PID2=$!
-docker-compose run --rm -T pipeline_app ./sorter continent &
-PID3=$!
-
-wait $PID1 $PID2 $PID3
+echo "Running sorters sequentially (each must read complete source topic)..."
+docker-compose run --rm -T pipeline_app ./sorter id
+docker-compose run --rm -T pipeline_app ./sorter name
+docker-compose run --rm -T pipeline_app ./sorter continent
 
 end_time=$(date +%s)
 echo "Total pipeline runtime: $((end_time - start_time)) seconds"

@@ -7,4 +7,9 @@ fi
 
 docker-compose down -v
 
+echo ""
+echo "Cleanup completed successfully!"
+# Pause so the window doesn't close immediately when run via double-click
+read -p "Press Enter to exit" || true
+
 
